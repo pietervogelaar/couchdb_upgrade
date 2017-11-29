@@ -56,11 +56,13 @@ class CouchDbUpgrader:
                  service_stop_command='sudo systemctl stop couchdb',
                  service_start_command='sudo systemctl start couchdb',
                  upgrade_command='sudo yum clean all && sudo yum install -y couchdb',
-                 latest_version_command="stable=$(grep 'publish cluster `stable` event' /var/log/couchdb/couchdb.log |"
-                                        " while read -r line; do timestamp=$(echo $line | awk '{ print $2 }'); if ["
-                                        " \"$(date -d\"$timestamp\" +'%Y%m%d%H%M%S')\" -ge \"{service_start_time}\" ];"
-                                        " then echo 'yes'; fi; done); if [ \"$stable\" != \"yes\" ]; then exit 1; fi",
-                 check_stable_command="",
+                 latest_version_command="sudo yum clean all >/dev/null 2>&1 && yum list all couchdb |"
+                                        " grep couchdb | awk '{ print $2 }' | cut -d '-' -f1 |"
+                                        " sort --version-sort -r | head -n 1",
+                 check_stable_command="stable=$(grep 'publish cluster `stable` event' /var/log/couchdb/couchdb.log |"
+                                      " while read -r line; do timestamp=$(echo $line | awk '{ print $2 }'); if ["
+                                      " \"$(date -d\"$timestamp\" +'%Y%m%d%H%M%S')\" -ge \"{service_start_time}\" ];"
+                                      " then echo 'yes'; fi; done); if [ \"$stable\" != \"yes\" ]; then exit 1; fi",
                  version='latest',
                  verbose=False,
                  ):
