@@ -64,6 +64,8 @@ class CouchDbUpgrader:
                                       " \"$(date -d\"$timestamp\" +'%Y%m%d%H%M%S')\" -ge \"{service_start_time}\" ];"
                                       " then echo 'yes'; fi; done); if [ \"$stable\" != \"yes\" ]; then exit 1; fi",
                  version='latest',
+                 reboot=False,
+                 force_reboot=False,
                  verbose=False,
                  ):
         """
@@ -79,6 +81,8 @@ class CouchDbUpgrader:
         :param latest_version_command: string
         :param check_stable_command: string
         :param version: string
+        :param reboot: bool
+        :param force_reboot: bool
         :param verbose: bool
         """
 
@@ -93,6 +97,8 @@ class CouchDbUpgrader:
         self._latest_version_command = latest_version_command
         self._check_stable_command = check_stable_command
         self._version = version
+        self._reboot = reboot
+        self._force_reboot = force_reboot
         self._verbose = verbose
         self._service_start_time = None
 
@@ -164,6 +170,11 @@ class CouchDbUpgrader:
 
         if result['exit_code'] != 0:
             return False
+
+        if self._force_reboot:
+            self.reboot(node)
+        elif self._reboot and 'Nothing to do' not in result['stdout']:
+            self.reboot(node)
 
         return True
 
@@ -279,6 +290,10 @@ class CouchDbUpgrader:
 
         return False
 
+    def reboot(self, node):
+        print('- Rebooting')
+        self.ssh_command(node, 'sudo /sbin/reboot')
+
     def get_node_url(self, node):
         """
         Gets a node URL
@@ -324,28 +339,36 @@ class CouchDbUpgrader:
     def upgrade_node(self, node):
         print('Node {}'.format(node))
 
+        self._service_start_time = datetime.datetime.now()
+        rebooting = False
+
         if self._version:
             # Only upgrade node if the current version is lower than the version to upgrade to
             if not self.current_version_lower(node):
-                return True
+                if self._force_reboot:
+                    rebooting = True
+                    self.reboot(node)
+                else:
+                    return True
 
-        # Stop CouchDB service
-        print('- Stopping CouchDB service')
-        if not self.stop_service(node):
-            sys.stderr.write("Failed to stop CouchDB service\n")
-            return False
+        if not rebooting:
+            # Stop CouchDB service
+            print('- Stopping CouchDB service')
+            if not self.stop_service(node):
+                sys.stderr.write("Failed to stop CouchDB service\n")
+                return False
 
-        # Upgrade the CouchDB software
-        print('- Upgrading CouchDB software')
-        if not self.upgrade_couchdb(node):
-            sys.stderr.write("Failed to upgrade CouchDB software\n")
-            return False
+            # Upgrade the CouchDB software
+            print('- Upgrading CouchDB software')
+            if not self.upgrade_couchdb(node):
+                sys.stderr.write("Failed to upgrade CouchDB software\n")
+                return False
 
-        # Start CouchDB service
-        print('- Starting CouchDB service')
-        if not self.start_service(node):
-            sys.stderr.write("Failed to start CouchDB service\n")
-            return False
+            # Start CouchDB service
+            print('- Starting CouchDB service')
+            if not self.start_service(node):
+                sys.stderr.write("Failed to start CouchDB service\n")
+                return False
 
         self.wait_until_joined(node)
         self.wait_until_status_stable(node)
@@ -423,6 +446,9 @@ if __name__ == '__main__':
                              " available version in the repository will be determined. Nodes with a version"
                              " equal or higher will be skipped. Default 'latest'",
                         default='latest')
+    parser.add_argument('--reboot', help='Reboots the server if an actual upgrade took place', action='store_true')
+    parser.add_argument('--force-reboot', help='Always reboots the server, even though no upgrade occurred because'
+                                               ' the version was already the latest', action='store_true')
     parser.add_argument('-v', '--verbose', help='Display of more information', action='store_true')
     args = parser.parse_args()
 
@@ -440,6 +466,8 @@ if __name__ == '__main__':
                                        args.latest_version_command,
                                        args.check_stable_command,
                                        args.version,
+                                       args.reboot,
+                                       args.force_reboot,
                                        args.verbose)
 
     if not couchdb_upgrader.upgrade():
