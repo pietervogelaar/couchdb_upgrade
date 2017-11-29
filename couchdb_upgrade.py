@@ -153,6 +153,13 @@ class CouchDbUpgrader:
         """
 
         result = self.ssh_command(node, self._upgrade_command)
+
+        if self._verbose:
+            print('stdout:')
+            print(result['stdout'])
+            print('stderr:')
+            print(result['stderr'])
+
         if result['exit_code'] != 0:
             return False
 
@@ -407,7 +414,7 @@ if __name__ == '__main__':
                              " then exit 1; fi\"",
                         default="stable=$(grep 'publish cluster `stable` event' /var/log/couchdb/couchdb.log |"
                                 " while read -r line; do timestamp=$(echo $line | awk '{ print $2 }'); if ["
-                                " \"$(date -d\"$timestamp\" +'%%Y%%m%%d%%H%%M%%S')\" -ge \"{service_start_time}\" ];"
+                                " \"$(date -d\"$timestamp\" +'%Y%m%d%H%M%S')\" -ge \"{service_start_time}\" ];"
                                 " then echo 'yes'; fi; done); if [ \"$stable\" != \"yes\" ]; then exit 1; fi")
     parser.add_argument('--version',
                         help="A specific version to upgrade to or 'latest'. If 'latest', then the highest"
