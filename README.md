@@ -13,7 +13,9 @@ Nodes that already have the correct version are skipped. So the script can be ex
                               [--upgrade-command UPGRADE_COMMAND]
                               [--latest-version-command LATEST_VERSION_COMMAND]
                               [--check-stable-command CHECK_STABLE_COMMAND]
-                              [--version VERSION] [--reboot] [--force-reboot] [-v]
+                              [--version VERSION]
+                              [--upgrade-system-command UPGRADE_SYSTEM_COMMAND]
+                              [--upgrade-system] [--reboot] [--force-reboot] [-v]
     
     Performs a rolling upgrade of a CouchDB cluster
     
@@ -56,6 +58,11 @@ Nodes that already have the correct version are skipped. So the script can be ex
                             'latest', then the highest available version in the
                             repository will be determined. Nodes with a version
                             equal or higher will be skipped. Default 'latest'
+      --upgrade-system-command UPGRADE_SYSTEM_COMMAND
+                            Command to upgrade operating system. Default 'sudo yum
+                            clean all && sudo yum update -y'
+      --upgrade-system      Upgrades the operating system also after upgrading
+                            CouchDB
       --reboot              Reboots the server if an actual upgrade took place
       --force-reboot        Always reboots the server, even though no upgrade
                             occurred because the version was already the latest
