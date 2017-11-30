@@ -100,7 +100,10 @@ class CouchDbUpgrader:
         self._reboot = reboot
         self._force_reboot = force_reboot
         self._verbose = verbose
+
+        # Internal class attributes
         self._service_start_time = None
+        self._rebooting = False
 
     def verbose_response(self, response):
         if self._verbose:
@@ -292,6 +295,7 @@ class CouchDbUpgrader:
 
     def reboot(self, node):
         print('- Rebooting')
+        self._rebooting = True
         self.ssh_command(node, 'sudo /sbin/reboot')
 
     def get_node_url(self, node):
@@ -340,18 +344,17 @@ class CouchDbUpgrader:
         print('Node {}'.format(node))
 
         self._service_start_time = datetime.datetime.now()
-        rebooting = False
+        self._rebooting = False
 
         if self._version:
             # Only upgrade node if the current version is lower than the version to upgrade to
             if not self.current_version_lower(node):
                 if self._force_reboot:
-                    rebooting = True
                     self.reboot(node)
                 else:
                     return True
 
-        if not rebooting:
+        if not self._rebooting:
             # Stop CouchDB service
             print('- Stopping CouchDB service')
             if not self.stop_service(node):
@@ -364,11 +367,12 @@ class CouchDbUpgrader:
                 sys.stderr.write("Failed to upgrade CouchDB software\n")
                 return False
 
-            # Start CouchDB service
-            print('- Starting CouchDB service')
-            if not self.start_service(node):
-                sys.stderr.write("Failed to start CouchDB service\n")
-                return False
+            if not self._rebooting:
+                # Start CouchDB service
+                print('- Starting CouchDB service')
+                if not self.start_service(node):
+                    sys.stderr.write("Failed to start CouchDB service\n")
+                    return False
 
         self.wait_until_joined(node)
         self.wait_until_status_stable(node)
