@@ -33,6 +33,7 @@
 import argparse
 import datetime
 import json
+import re
 import requests
 import subprocess
 import sys
@@ -326,15 +327,22 @@ class CouchDbUpgrader:
         stdout = p.stdout.readlines()
         stderr = p.stderr.readlines()
 
-        if stderr:
-            sys.stderr.write("SSH error from host {}: {}\n".format(host, ''.join(stderr)))
+        stdout_string = ''.join(stdout)
+        stderr_string = ''.join(stderr)
+
+        # Remove clutter
+        regex = re.compile(r"Connection .+? closed by remote host\.\n?", re.IGNORECASE)
+        stderr_string = regex.sub('', stderr_string).strip()
+
+        if stderr_string:
+            sys.stderr.write("SSH error from host {}: {}\n".format(host, stderr_string))
 
         # Make a return code available
         p.communicate()[0]
 
         result = {
-            'stdout': ''.join(stdout),
-            'stderr': ''.join(stderr),
+            'stdout': stdout_string,
+            'stderr': stderr_string,
             'exit_code': p.returncode,
         }
 
