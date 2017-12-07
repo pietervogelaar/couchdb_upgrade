@@ -1,6 +1,6 @@
 # couchdb_upgrade
 
-Performs a rolling upgrade of an CouchDB cluster. It's great for keeping your cluster automatically
+Performs a rolling upgrade of a CouchDB cluster. It's great for keeping your cluster automatically
 patched without downtime.
 
 Nodes that already have the correct version are skipped. So the script can be executed multiple times if desired. 
