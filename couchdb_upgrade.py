@@ -329,7 +329,7 @@ class CouchDbUpgrader:
     def reboot(self, node):
         print('- Rebooting')
         self._rebooting = True
-        self.ssh_command(node, 'sudo /sbin/reboot')
+        self.ssh_command(node, 'sudo /sbin/shutdown -r now')
 
     def get_node_url(self, node):
         """
