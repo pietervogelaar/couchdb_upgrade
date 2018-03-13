@@ -289,17 +289,31 @@ class CouchDbUpgrader:
         while True:
             time.sleep(5)
 
-            service_start_time_string = self._service_start_time.strftime('%Y%m%d%H%M%S')
-            command = self._check_stable_command.replace('{service_start_time}', service_start_time_string)
+            url = '{}/_up'.format(self.get_node_url(node))
 
-            result = self.ssh_command(node, command)
-
-            if result['exit_code'] == 0:
-                if self._verbose:
-                    print('Cluster status is stable')
+            try:
+                if self._username:
+                    auth = HTTPBasicAuth(self._username, self._password)
                 else:
-                    sys.stdout.write(".\n")
-                    sys.stdout.flush()
+                    auth = None
+
+                response = requests.get(url, auth=auth)
+                self.verbose_response(response)
+
+                if response.status_code == 200:
+                    data = response.json()
+
+                    if data['status'] == 'ok':
+                        if self._verbose:
+                            print("Cluster status is OK")
+                        else:
+                            sys.stdout.write(".\n")
+                            sys.stdout.flush()
+
+                        return True
+            except ConnectionError as exception:
+                if self._verbose:
+                    print('Could not connect to node')
 
                 return True
 
